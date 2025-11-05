@@ -1,4 +1,5 @@
 using HyMFacturan.Components;
+using Microsoft.Data.Sqlite;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,5 +25,15 @@ app.UseAntiforgery();
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
+
+string ruta = "mibase.db";
+using var conexion = new SqliteConnection($"DataSource={ruta}");
+conexion.Open();
+var comando = conexion.CreateCommand();
+comando.CommandText = @"create table if not exists Facturas(Fecha text, nombre text, Articulo text, precio integer)";
+comando.ExecuteNonQuery();
+
+
+
 
 app.Run();
