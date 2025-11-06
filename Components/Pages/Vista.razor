@@ -1,5 +1,111 @@
-﻿<h3>Vista</h3>
+﻿@page "/vista"
+@rendermode InteractiveServer
+@using HyMFacturan.Components.Data
+@using HyMFacturan.Components.Servicios
+@inject ServicioControlador servicio
+
+<h3>Gestión de Facturas</h3>
+
+
+
+
+<div class="form">
+    <label>Fecha</label>
+    <input @bind="nueva.fecha" placeholder="YYYY-MM-DD" />
+
+    <label>Nombre</label>
+    <input @bind="nueva.Nombre" placeholder="Nombre" />
+
+    <label>Artículo</label>
+    <input @bind="nueva.articulo" placeholder="Artículo" />
+
+    <label>Precio</label>
+    <input type="number" @bind="nueva.precio" />
+
+    <div style="margin-top:8px;">
+        <button type="button" @onclick="async () => await EjecutarAsync(Agregar)">Agregar</button>
+        <button type="button" @onclick="async () => await EjecutarAsync(Cargar)">Cargar</button>
+        <button type="button" @onclick="async () => await EjecutarAsync(Borrar)">Borrar todas</button>
+    </div>
+</div>
+
+@if (facturas is null)
+{
+    <p>Cargando...</p>
+}
+else if (!facturas.Any())
+{
+    <p>No hay facturas.</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Fecha</th>
+                <th>Nombre</th>
+                <th>Artículo</th>
+                <th>Precio</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var f in facturas)
+            {
+                <tr>
+                    <td>@f.fecha</td>
+                    <td>@f.Nombre</td>
+                    <td>@f.articulo</td>
+                    <td>@f.precio</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
 
 @code {
+    private List<Facturas>? facturas;
+    private Facturas nueva = new() { fecha = "", Nombre = "", articulo = "", precio = 0 };
 
+    private string mensajeError = string.Empty;
+    private string mensajeOk = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await EjecutarAsync(Cargar, mostrarOk: false);
+    }
+
+    private async Task Agregar()
+    {
+        await servicio.AgregarFactura(nueva);
+        nueva = new() { fecha = "", Nombre = "", articulo = "", precio = 0 };
+        await Cargar();
+    }
+
+    private async Task Cargar()
+    {
+        facturas = await servicio.ObtenerFacturas();
+    }
+
+    private async Task Borrar()
+    {
+        await servicio.BorrarTodas();
+        facturas = new List<Facturas>();
+    }
+
+    private async Task EjecutarAsync(Func<Task> accion, bool mostrarOk = true)
+    {
+        mensajeError = string.Empty;
+        mensajeOk = string.Empty;
+        try
+        {
+            await accion();
+            if (mostrarOk)
+                mensajeOk = "Operación exitosa.";
+        }
+        catch (Exception ex)
+        {
+            mensajeError = $"Error: {ex.Message}\n{ex.StackTrace}";
+        }
+        StateHasChanged();
+    }
 }
