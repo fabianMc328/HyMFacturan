@@ -135,8 +135,33 @@ namespace HyMFacturan.Components.Data
             }
             return facturasList;
         }
+        public async Task<List<Articulo>> ObtenerArticulosPorFactura(int facturaId)
+        {
+            var lista = new List<Articulo>();
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
 
-     
+            var cmd = conexion.CreateCommand();
+            cmd.CommandText = "SELECT Id, Nombre, Precio, FacturaId FROM Articulos WHERE FacturaId = $fid;";
+            cmd.Parameters.AddWithValue("$fid", facturaId);
+
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                lista.Add(new Articulo
+                {
+                    Id = reader.GetInt32(0),
+                    Nombre = reader.GetString(1),
+                    Precio = reader.GetInt32(2),
+                    FacturaId = reader.GetInt32(3)
+                });
+            }
+
+            return lista;
+        }
+
+
+
         public async Task BorrarTodas()
         {
             using var conexion = new SqliteConnection(_connectionString);
