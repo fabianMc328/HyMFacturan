@@ -44,7 +44,19 @@ namespace HyMFacturan.Components.Data
             comandoArticulos.ExecuteNonQuery();
         }
 
-        
+
+        public async Task ActualizarArticulo(Articulo articulo)
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+            var cmd = conexion.CreateCommand();
+            cmd.CommandText = "UPDATE Articulos SET Nombre = $Nombre, Precio = $Precio WHERE Id = $Id;";
+            cmd.Parameters.AddWithValue("$Nombre", articulo.Nombre ?? string.Empty);
+            cmd.Parameters.AddWithValue("$Precio", articulo.Precio);
+            cmd.Parameters.AddWithValue("$Id", articulo.Id);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
         public async Task GuardarFacturaCompleta(Factura factura, List<Articulo> articulos)
         {
             using var conexion = new SqliteConnection(_connectionString);
