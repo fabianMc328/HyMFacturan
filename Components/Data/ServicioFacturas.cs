@@ -57,6 +57,20 @@ namespace HyMFacturan.Components.Data
             await cmd.ExecuteNonQueryAsync();
         }
 
+
+        public async Task EliminarArticulo(int articuloId)
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+            var cmd = conexion.CreateCommand();
+            cmd.CommandText = "DELETE FROM Articulos WHERE Id = $Id;";
+            cmd.Parameters.AddWithValue("$Id", articuloId);
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+
+
+
         public async Task GuardarFacturaCompleta(Factura factura, List<Articulo> articulos)
         {
             using var conexion = new SqliteConnection(_connectionString);
