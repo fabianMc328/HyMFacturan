@@ -1,5 +1,6 @@
 using HyMFacturan.Components;
-using Microsoft.Data.Sqlite;
+using HyMFacturan.Components.Data;       // <-- NECESARIO
+using HyMFacturan.Components.Servicios;  // <-- NECESARIO
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -7,33 +8,31 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+// --- AQUÍ REGISTRAMOS AMBOS SERVICIOS ---
+
+// 1. Registramos el servicio "real" que trabaja
+builder.Services.AddScoped<ServicioFacturas>();
+
+// 2. Registramos el "intermediario" que lo usa
+//    Blazor automáticamente le inyectará ServicioFacturas
+builder.Services.AddScoped<ServicioControlador>();
+
+// ------------------------------------------
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error", createScopeForErrors: true);
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-
+app.UseStaticFiles(); // <-- Importante
 app.UseAntiforgery();
 
-app.MapStaticAssets();
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
-
-string ruta = "mibase.db";
-using var conexion = new SqliteConnection($"DataSource={ruta}");
-conexion.Open();
-var comando = conexion.CreateCommand();
-comando.CommandText = @"create table if not exists Facturas(Fecha text, nombre text, Articulo text, precio integer)";
-comando.ExecuteNonQuery();
-
-
-
 
 app.Run();
