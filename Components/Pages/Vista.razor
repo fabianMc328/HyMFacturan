@@ -1,70 +1,118 @@
 ﻿@page "/vista"
 @rendermode InteractiveServer
+
 @using HyMFacturan.Components.Data
 @using HyMFacturan.Components.Servicios
+
 @inject ServicioControlador servicio
 
 <h3>Gestión de Facturas</h3>
 
+@if (!string.IsNullOrEmpty(mensajeError))
+{
+    <div style="color: red;">@mensajeError</div>
+}
+@if (!string.IsNullOrEmpty(mensajeOk))
+{
+    <div style="color: green;">@mensajeOk</div>
+}
 
+<div>
+    <h4>Nueva Factura</h4>
 
+    <div>
+        <label>Fecha:</label>
+        <input @bind="nuevaFactura.Fecha" placeholder="YYYY-MM-DD" />
+    </div>
+    <div>
+        <label>Nombre Cliente:</label>
+        <input @bind="nuevaFactura.Nombre" placeholder="Nombre" />
+    </div>
 
-<div class="form">
-    <label>Fecha</label>
-    <input @bind="nueva.fecha" placeholder="YYYY-MM-DD" />
+    <hr />
 
-    <label>Nombre</label>
-    <input @bind="nueva.Nombre" placeholder="Nombre" />
+    <h5>Añadir Artículos</h5>
+    <div>
+        <input @bind="nuevoArticulo.Nombre" placeholder="Nombre del Artículo" />
+        <input type="number" @bind="nuevoArticulo.Precio" placeholder="Precio" />
+        <button type="button" @onclick="AñadirArticuloTemporal">Añadir Artículo</button>
+    </div>
 
-    <label>Artículo</label>
-    <input @bind="nueva.articulo" placeholder="Artículo" />
+    @if (articulosTemporales.Any())
+    {
+        <table style="margin-top: 15px;">
+            <thead>
+                <tr><th>Artículo</th><th>Precio</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var art in articulosTemporales)
+                {
+                    <tr>
+                        <td>@art.Nombre</td>
+                        <td>@art.Precio</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
 
-    <label>Precio</label>
-    <input type="number" @bind="nueva.precio" />
+        <h3>Total: @totalTemporal</h3>
+    }
 
-    <div style="margin-top:8px;">
-        <button type="button" @onclick="async () => await EjecutarAsync(Agregar)">Agregar</button>
-        <button type="button" @onclick="async () => await EjecutarAsync(Cargar)">Cargar</button>
-        <button type="button" @onclick="async () => await EjecutarAsync(Borrar)">Borrar todas</button>
+    <div style="margin-top: 20px;">
+        <button type="button" @onclick="() => EjecutarAsync(GuardarFacturaCompleta)">
+            Guardar Factura Completa
+        </button>
     </div>
 </div>
 
-@if (facturas is null)
+<hr />
+<h4>Facturas Guardadas</h4>
+@if (facturasGuardadas is null)
 {
     <p>Cargando...</p>
 }
-else if (!facturas.Any())
+else if (!facturasGuardadas.Any())
 {
-    <p>No hay facturas.</p>
+    <p>No hay facturas guardadas.</p>
 }
 else
 {
-    <table class="table">
+    <table>
         <thead>
             <tr>
+                <th>ID</th>
                 <th>Fecha</th>
                 <th>Nombre</th>
-                <th>Artículo</th>
-                <th>Precio</th>
+                <th>Total</th>
             </tr>
         </thead>
         <tbody>
-            @foreach (var f in facturas)
+            @foreach (var f in facturasGuardadas)
             {
                 <tr>
-                    <td>@f.fecha</td>
+                    <td>@f.Id</td>
+                    <td>@f.Fecha</td>
                     <td>@f.Nombre</td>
-                    <td>@f.articulo</td>
-                    <td>@f.precio</td>
+                    <td>@f.Total</td>
                 </tr>
             }
         </tbody>
     </table>
 }
 
+<div style="margin-top: 8px;">
+    <button type="button" @onclick="() => EjecutarAsync(Cargar)">Cargar Facturas</button>
+    <button type="button" @onclick="() => EjecutarAsync(Borrar)">Borrar todas</button>
+</div>
+
+
 @code {
-    private List<Facturas>? facturas;
-    private Facturas nueva = new() { fecha = "", Nombre = "", articulo = "", precio = 0 };
+    private List<Factura>? facturasGuardadas;
+    private Factura nuevaFactura = new();          
+    private Articulo nuevoArticulo = new();        
+    private List<Articulo> articulosTemporales = new(); 
+    private int totalTemporal = 0;                  
+    
 
     private string mensajeError = string.Empty;
     private string mensajeOk = string.Empty;
@@ -74,24 +122,60 @@ else
         await EjecutarAsync(Cargar, mostrarOk: false);
     }
 
-    private async Task Agregar()
+ 
+
+    private void AñadirArticuloTemporal()
     {
-        await servicio.AgregarFactura(nueva);
-        nueva = new() { fecha = "", Nombre = "", articulo = "", precio = 0 };
+        if (nuevoArticulo.Precio > 0 && !string.IsNullOrWhiteSpace(nuevoArticulo.Nombre))
+        {
+            articulosTemporales.Add(nuevoArticulo);
+            totalTemporal = articulosTemporales.Sum(a => a.Precio);
+            nuevoArticulo = new();
+        }
+    }
+
+    private async Task GuardarFacturaCompleta()
+    {
+        if (articulosTemporales.Count == 0)
+        {
+            mensajeError = "No se puede guardar una factura sin artículos.";
+            return;
+        }
+
+        if(string.IsNullOrWhiteSpace(nuevaFactura.Fecha))
+        {
+            mensajeError = "El campo Fecha es obligatorio.";
+            return; 
+        }
+
+     
+        if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre))
+        {
+            mensajeError = "El campo Nombre Cliente es obligatorio.";
+            return; 
+        }
+
+
+        nuevaFactura.Total = totalTemporal;
+        await servicio.GuardarFacturaCompleta(nuevaFactura, articulosTemporales);
+        nuevaFactura = new();
+        articulosTemporales.Clear();
+        totalTemporal = 0;
         await Cargar();
     }
 
     private async Task Cargar()
     {
-        facturas = await servicio.ObtenerFacturas();
+        facturasGuardadas = await servicio.ObtenerFacturas();
     }
 
     private async Task Borrar()
     {
         await servicio.BorrarTodas();
-        facturas = new List<Facturas>();
+        facturasGuardadas = new List<Factura>();
+        articulosTemporales.Clear();
+        totalTemporal = 0;
     }
-
     private async Task EjecutarAsync(Func<Task> accion, bool mostrarOk = true)
     {
         mensajeError = string.Empty;
@@ -100,11 +184,11 @@ else
         {
             await accion();
             if (mostrarOk)
-                mensajeOk = "Operación exitosa.";
+                mensajeOk = "";
         }
         catch (Exception ex)
         {
-            mensajeError = $"Error: {ex.Message}\n{ex.StackTrace}";
+            mensajeError = $"Error: {ex.Message}";
         }
         StateHasChanged();
     }
