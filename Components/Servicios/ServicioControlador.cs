@@ -31,5 +31,19 @@ namespace HyMFacturan.Components.Servicios
         {
             await _servicioFacturas.BorrarTodas();
         }
+        public async Task ActualizarArticulo(Articulo articulo)
+        {
+            await _servicioFacturas.ActualizarArticulo(articulo);
+        }
+
+        public async Task EliminarArticulo(int articuloId)
+        {
+            await _servicioFacturas.EliminarArticulo(articuloId);
+        }
+
+        public async Task ActualizarTotalFactura(int facturaId, int nuevoTotal)
+        {
+            await _servicioFacturas.ActualizarTotalFactura(facturaId, nuevoTotal);
+        }
     }
 }
