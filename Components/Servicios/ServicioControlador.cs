@@ -1,20 +1,30 @@
-﻿using HyMFacturan.Components.Data;
+﻿using HyMFacturan.Components.Data; 
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace HyMFacturan.Components.Servicios
 {
+   
     public class ServicioControlador
     {
-        // Instancia interna sin usar DI
-        private readonly ServicioFacturas _servicioFacturas = new();
+      
+        private readonly ServicioFacturas _servicioFacturas;
 
-        public async Task AgregarFactura(Factura factura)
+        
+        public ServicioControlador(ServicioFacturas servicioFacturas)
         {
-            await _servicioFacturas.AgregarARTICULO(factura);
+            _servicioFacturas = servicioFacturas;
+        }
+
+
+        public async Task GuardarFacturaCompleta(Factura factura, List<Articulo> articulos)
+        {
+            await _servicioFacturas.GuardarFacturaCompleta(factura, articulos);
         }
 
         public async Task<List<Factura>> ObtenerFacturas()
         {
-            return await _servicioFacturas.ObtenerFactura();
+            return await _servicioFacturas.ObtenerFacturas();
         }
 
         public async Task BorrarTodas()
