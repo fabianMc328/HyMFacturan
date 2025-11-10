@@ -1,29 +1,26 @@
-﻿using System;
+﻿using Microsoft.Data.Sqlite;
 using System.Collections.Generic;
-using System.IO;
-using Microsoft.Data.Sqlite;
+using System.Threading.Tasks;
 
 namespace HyMFacturan.Components.Data
 {
+   
     public class ServicioFacturas
     {
         private readonly string _connectionString = "Data Source=mibase.db";
-        private List<Factura> Facturas = new List<Factura>();
 
-        // Constructor
+     
         public ServicioFacturas()
         {
-            InicializarBDD();
+            InitializeDatabase();
         }
 
-
-        // Método para inicializar la base de datos y crear tablas si no existen
-        private void InicializarBDD()
+        private void InitializeDatabase()
         {
             using var conexion = new SqliteConnection(_connectionString);
             conexion.Open();
 
-            // Comando para crear la tabla Facturas
+           
             var comandoFacturas = conexion.CreateCommand();
             comandoFacturas.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Facturas(
@@ -34,7 +31,7 @@ namespace HyMFacturan.Components.Data
                 )";
             comandoFacturas.ExecuteNonQuery();
 
-            // Comando para crear la tabla Articulos
+
             var comandoArticulos = conexion.CreateCommand();
             comandoArticulos.CommandText = @"
                 CREATE TABLE IF NOT EXISTS Articulos(
@@ -47,6 +44,71 @@ namespace HyMFacturan.Components.Data
             comandoArticulos.ExecuteNonQuery();
         }
 
+        
+        public async Task GuardarFacturaCompleta(Factura factura, List<Articulo> articulos)
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
       
+            var cmdFactura = conexion.CreateCommand();
+            cmdFactura.CommandText = "INSERT INTO Facturas (Fecha, Nombre, Total) VALUES ($Fecha, $Nombre, $Total); SELECT last_insert_rowid();";
+            cmdFactura.Parameters.AddWithValue("$Fecha", factura.Fecha ?? string.Empty);
+            cmdFactura.Parameters.AddWithValue("$Nombre", factura.Nombre ?? string.Empty);
+            cmdFactura.Parameters.AddWithValue("$Total", factura.Total);
+
+            var nuevoFacturaId = (long)await cmdFactura.ExecuteScalarAsync();
+
+         
+            foreach (var articulo in articulos)
+            {
+                var cmdArticulo = conexion.CreateCommand();
+                cmdArticulo.CommandText = "INSERT INTO Articulos (Nombre, Precio, FacturaId) VALUES ($Nombre, $Precio, $FacturaId);";
+                cmdArticulo.Parameters.AddWithValue("$Nombre", articulo.Nombre ?? string.Empty);
+                cmdArticulo.Parameters.AddWithValue("$Precio", articulo.Precio);
+                cmdArticulo.Parameters.AddWithValue("$FacturaId", nuevoFacturaId); 
+
+                await cmdArticulo.ExecuteNonQueryAsync();
+            }
+        }
+
+    
+        public async Task<List<Factura>> ObtenerFacturas()
+        {
+            var facturasList = new List<Factura>();
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
+            var comando = conexion.CreateCommand();
+            comando.CommandText = "SELECT Id, Fecha, Nombre, Total FROM Facturas;";
+            using var lector = await comando.ExecuteReaderAsync();
+
+            while (await lector.ReadAsync())
+            {
+                facturasList.Add(new Factura
+                {
+                    Id = lector.GetInt32(0),
+                    Fecha = lector.IsDBNull(1) ? string.Empty : lector.GetString(1),
+                    Nombre = lector.IsDBNull(2) ? string.Empty : lector.GetString(2),
+                    Total = lector.GetInt32(3)
+                });
+            }
+            return facturasList;
+        }
+
+     
+        public async Task BorrarTodas()
+        {
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
+            var cmdArticulos = conexion.CreateCommand();
+            cmdArticulos.CommandText = "DELETE FROM Articulos;";
+            await cmdArticulos.ExecuteNonQueryAsync();
+
+            var cmdFacturas = conexion.CreateCommand();
+            cmdFacturas.CommandText = "DELETE FROM Facturas;";
+            await cmdFacturas.ExecuteNonQueryAsync();
+        }
     }
 }
