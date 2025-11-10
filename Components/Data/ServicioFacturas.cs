@@ -7,68 +7,46 @@ namespace HyMFacturan.Components.Data
 {
     public class ServicioFacturas
     {
-        private List<Facturas> Facturas = new List<Facturas>();
-       
+        private readonly string _connectionString = "Data Source=mibase.db";
+        private List<Factura> Facturas = new List<Factura>();
 
-        public async Task AgregarARTICULO(Facturas factura)
+        // Constructor
+        public ServicioFacturas()
         {
-            string ruta = "mibase.db";
-            using var conexion = new SqliteConnection($"Data Source={ruta}");
-            await conexion.OpenAsync();
-
-            using var comando = conexion.CreateCommand();
-            comando.CommandText = "INSERT INTO Facturas (Fecha, Nombre, Articulo, precio) VALUES ($Fecha, $Nombre, $Articulo, $precio);";
-            comando.Parameters.AddWithValue("$Fecha", factura.fecha ?? string.Empty);
-            comando.Parameters.AddWithValue("$Nombre", factura.Nombre ?? string.Empty);
-            comando.Parameters.AddWithValue("$Articulo", factura.articulo ?? string.Empty);
-            comando.Parameters.AddWithValue("$precio", factura.precio);
-
-            await comando.ExecuteNonQueryAsync();
-
-            Facturas.Add(factura);
+            InicializarBDD();
         }
 
-        public async Task<List<Facturas>> ObtenerFactura()
+
+        // Método para inicializar la base de datos y crear tablas si no existen
+        private void InicializarBDD()
         {
-            Facturas.Clear();
-            string ruta = "mibase.db";
+            using var conexion = new SqliteConnection(_connectionString);
+            conexion.Open();
 
-            using var conexion = new SqliteConnection($"Data Source={ruta}");
-            await conexion.OpenAsync();
+            // Comando para crear la tabla Facturas
+            var comandoFacturas = conexion.CreateCommand();
+            comandoFacturas.CommandText = @"
+                CREATE TABLE IF NOT EXISTS Facturas(
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Fecha TEXT, 
+                    Nombre TEXT, 
+                    Total INTEGER
+                )";
+            comandoFacturas.ExecuteNonQuery();
 
-            using var comando = conexion.CreateCommand();
-            comando.CommandText = "SELECT Fecha, Nombre, Articulo, precio FROM Facturas;";
-            using var lector = await comando.ExecuteReaderAsync();
-
-            while (await lector.ReadAsync())
-            {
-                var fecha = lector.IsDBNull(0) ? string.Empty : lector.GetString(0);
-                var nombre = lector.IsDBNull(1) ? string.Empty : lector.GetString(1);
-                var articulo = lector.IsDBNull(2) ? string.Empty : lector.GetString(2);
-                var precio = lector.IsDBNull(3) ? 0 : lector.GetInt32(3);
-
-                Facturas.Add(new Facturas
-                {
-                    fecha = fecha,
-                    Nombre = nombre,
-                    articulo = articulo,
-                    precio = precio
-                });
-            }
-
-            return Facturas;
+            // Comando para crear la tabla Articulos
+            var comandoArticulos = conexion.CreateCommand();
+            comandoArticulos.CommandText = @"
+                CREATE TABLE IF NOT EXISTS Articulos(
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Nombre TEXT, 
+                    Precio INTEGER,
+                    FacturaId INTEGER,
+                    FOREIGN KEY(FacturaId) REFERENCES Facturas(Id)
+                )";
+            comandoArticulos.ExecuteNonQuery();
         }
 
-   
-        public async Task BorrarTodas()
-        {
-            string ruta = "mibase.db";
-            using var conexion = new SqliteConnection($"Data Source={ruta}");
-            await conexion.OpenAsync();
-            using var comando = conexion.CreateCommand();
-            comando.CommandText = "DELETE FROM Facturas;";
-            await comando.ExecuteNonQueryAsync();
-            Facturas.Clear();
-        }
+      
     }
 }
