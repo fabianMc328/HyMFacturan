@@ -53,7 +53,7 @@ namespace HyMFacturan.Components.Data
       
             var cmdFactura = conexion.CreateCommand();
             cmdFactura.CommandText = "INSERT INTO Facturas (Fecha, Nombre, Total) VALUES ($Fecha, $Nombre, $Total); SELECT last_insert_rowid();";
-            cmdFactura.Parameters.AddWithValue("$Fecha", factura.Fecha ?? string.Empty);
+            cmdFactura.Parameters.AddWithValue("$Fecha", factura.Fecha);
             cmdFactura.Parameters.AddWithValue("$Nombre", factura.Nombre ?? string.Empty);
             cmdFactura.Parameters.AddWithValue("$Total", factura.Total);
 
@@ -88,7 +88,7 @@ namespace HyMFacturan.Components.Data
                 facturasList.Add(new Factura
                 {
                     Id = lector.GetInt32(0),
-                    Fecha = lector.IsDBNull(1) ? string.Empty : lector.GetString(1),
+                    Fecha = lector.IsDBNull(1) ? default(DateTime) : lector.GetDateTime(1),
                     Nombre = lector.IsDBNull(2) ? string.Empty : lector.GetString(2),
                     Total = lector.GetInt32(3)
                 });

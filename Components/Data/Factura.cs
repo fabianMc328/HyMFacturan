@@ -4,7 +4,7 @@
 
     {
         public int Id { get; set; }
-        public String Fecha {  get; set; }
+        public DateTime Fecha { get; set; }
         public String Nombre { get; set; }
         public String articulo { get; set; }
 

@@ -22,7 +22,7 @@
 
     <div>
         <label>Fecha:</label>
-        <input @bind="nuevaFactura.Fecha" placeholder="YYYY-MM-DD" />
+        <input type="date" @bind="nuevaFactura.Fecha" />
     </div>
     <div>
         <label>Nombre Cliente:</label>
@@ -142,11 +142,7 @@ else
             return;
         }
 
-        if(string.IsNullOrWhiteSpace(nuevaFactura.Fecha))
-        {
-            mensajeError = "El campo Fecha es obligatorio.";
-            return; 
-        }
+       
 
      
         if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre))
