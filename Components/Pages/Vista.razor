@@ -91,7 +91,7 @@ else
             {
                 <tr>
                     <td>@f.Id</td>
-                    <td>@f.Fecha</td>
+                    <td>@f.Fecha.ToString("dd/MM/yyyy")</td>
                     <td>@f.Nombre</td>
                     <td>@f.Total</td>
                 </tr>
@@ -108,7 +108,7 @@ else
 
 @code {
     private List<Factura>? facturasGuardadas;
-    private Factura nuevaFactura = new();          
+    private Factura nuevaFactura = new() { Fecha = DateTime.Now };
     private Articulo nuevoArticulo = new();        
     private List<Articulo> articulosTemporales = new(); 
     private int totalTemporal = 0;                  
