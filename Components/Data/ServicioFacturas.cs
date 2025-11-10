@@ -69,7 +69,21 @@ namespace HyMFacturan.Components.Data
         }
 
 
+        public async Task ActualizarTotalFactura( int facturaId, int nuevoTotal)
+        {
 
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+            var cmd = conexion.CreateCommand();
+            cmd.CommandText = "UPDATE Facturas SET Total = $Total WHERE Id = $Id;";
+            cmd.Parameters.AddWithValue("$Total", nuevoTotal);
+            cmd.Parameters.AddWithValue("$Id", facturaId);
+
+            await cmd.ExecuteNonQueryAsync();
+
+
+
+        }
 
         public async Task GuardarFacturaCompleta(Factura factura, List<Articulo> articulos)
         {
