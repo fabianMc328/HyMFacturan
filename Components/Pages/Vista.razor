@@ -146,14 +146,65 @@ else
     </table>
 }
 
+<h4>Reporte Anual SAT</h4>
+<div>
+    <label>Seleccionar Año:</label>
+    <input type="number" min="2000" max="2100" @bind="añoReporte" />
+    <button @onclick="() => EjecutarAsync(GenerarReporte, mostrarOk: false)">Generar Reporte</button>
+</div>
+
+@if (FacturasPormes.Any())
+{
+    <h5>Reporte para el año @añoReporte</h5>
+
+    @foreach (var mesNumero in FacturasPormes.Keys.OrderBy(m => m))
+    {
+        <div style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
+            <h4>@ObtenerNombreMes(mesNumero)</h4>
+            <table border="1" width="100%">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Nombre</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var factura in FacturasPormes[mesNumero])
+                    {
+                        <tr>
+                            <td>@factura.Id</td>
+                            <td>@factura.Fecha.ToString("dd/MM/yyyy")</td>
+                            <td>@factura.Nombre</td>
+                            <td>@factura.Total</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <h5 style="text-align: right; margin-top: 10px;">
+                Total Mes: <b>@TotalesPorMes[mesNumero]</b>
+            </h5>
+            @if (mesNumero == ultimoMesFacturado)
+            {
+                <h4 style="text-align: right; margin-top: 15px; border-top: 2px solid black; padding-top: 10px;">
+                    Total Anual (@añoReporte): <b>@totalAnualReporte</b>
+                </h4>
+            }
+        </div>
+    }
+}
+else
+{
+    <p>No hay datos de reporte para mostrar.</p>
+}
 <div style="margin-top: 8px;">
     <button type="button" @onclick="() => EjecutarAsync(Cargar)">Cargar Facturas</button>
     <button type="button" @onclick="() => EjecutarAsync(Borrar)">Borrar todas</button>
 </div>
 
-
 @code {
-   
+
     private List<Factura>? facturasGuardadas;
     private string mensajeError = string.Empty;
     private string mensajeOk = string.Empty;
@@ -161,9 +212,15 @@ else
     private Articulo nuevoArticulo = new();
     private List<Articulo> articulosTemporales = new();
     private int totalTemporal = 0;
+    private int añoReporte = DateTime.Now.Year;
+    private Dictionary<int, List<Factura>> FacturasPormes = new();
+    private Dictionary<int, int> TotalesPorMes = new();
+    private int totalAnualReporte = 0;
+    private int ultimoMesFacturado = 0;
 
- 
-   
+
+
+
     private Dictionary<int, List<Articulo>> articulosPorFactura = new();
     private Articulo? articuloEditando;
 
@@ -173,7 +230,7 @@ else
         await EjecutarAsync(Cargar, mostrarOk: false);
     }
 
-    
+
     private void AñadirArticuloTemporal()
     {
         if (nuevoArticulo.Precio > 0 && !string.IsNullOrWhiteSpace(nuevoArticulo.Nombre))
@@ -202,11 +259,11 @@ else
             return;
         }
 
-     
+
         nuevaFactura.Total = totalTemporal;
         await servicio.GuardarFacturaCompleta(nuevaFactura, articulosTemporales);
 
-     
+
         nuevaFactura = new() { Fecha = DateTime.Now };
         articulosTemporales.Clear();
         totalTemporal = 0;
@@ -214,7 +271,7 @@ else
         await Cargar(); 
     }
 
-   
+
     private async Task Cargar()
     {
         facturasGuardadas = await servicio.ObtenerFacturas();
@@ -233,7 +290,7 @@ else
 
     private async Task CargarArticulos(int facturaId)
     {
-   
+
         var arts = await servicio.ObtenerArticulosPorFactura(facturaId);
         articulosPorFactura[facturaId] = arts;
         articuloEditando = null; 
@@ -241,7 +298,7 @@ else
 
     private void OcultarArticulos(int facturaId)
     {
-       
+
         if (articulosPorFactura.ContainsKey(facturaId))
         {
             articulosPorFactura.Remove(facturaId);
@@ -251,7 +308,7 @@ else
 
     private void EditarArticulo(Articulo art)
     {
-       
+
         articuloEditando = new Articulo
         {
             Id = art.Id,
@@ -267,16 +324,16 @@ else
     {
         if (articuloEditando == null) return;
 
-      
+
         await servicio.ActualizarArticulo(articuloEditando);
 
-       
+
         articulosPorFactura[factura.Id] = await servicio.ObtenerArticulosPorFactura(factura.Id);
 
-     
+
         int nuevoTotal = articulosPorFactura[factura.Id].Sum(a => a.Precio);
 
-  
+
         await servicio.ActualizarTotalFactura(factura.Id, nuevoTotal);
         factura.Total = nuevoTotal; 
 
@@ -286,20 +343,60 @@ else
 
     private async Task EliminarArticulo(Factura factura, int articuloId)
     {
-      
+
         await servicio.EliminarArticulo(articuloId);
 
-       
+
         articulosPorFactura[factura.Id] = await servicio.ObtenerArticulosPorFactura(factura.Id);
 
-      
+
         int nuevoTotal = articulosPorFactura[factura.Id].Sum(a => a.Precio);
 
-    
+
         await servicio.ActualizarTotalFactura(factura.Id, nuevoTotal);
         factura.Total = nuevoTotal;
 
         mensajeOk = "Artículo eliminado"; 
+    }
+    private async Task GenerarReporte()
+    {
+
+        FacturasPormes.Clear();
+        TotalesPorMes.Clear();
+        totalAnualReporte = 0;
+        ultimoMesFacturado = 0;
+        var FacturasDelAño = await servicio.ObtenerFacturasPorAño(añoReporte);
+
+
+        if (FacturasDelAño.Any())
+        {
+            totalAnualReporte = FacturasDelAño.Sum(f => f.Total);
+           
+            FacturasPormes = FacturasDelAño
+                .GroupBy(f => f.Fecha.Month)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            TotalesPorMes = FacturasPormes
+                .ToDictionary(
+                    kvp => kvp.Key, 
+                    kvp => kvp.Value.Sum(f => f.Total) 
+                );
+            if (FacturasPormes.Keys.Any())
+            {
+                ultimoMesFacturado = FacturasPormes.Keys.Max();
+            }
+        }
+        else
+        {
+            mensajeOk = "No se encontraron facturas para el año " + añoReporte;
+        }
+
+
+    }
+    private string ObtenerNombreMes(int mes)
+    {
+  
+        return new System.Globalization.CultureInfo("es-ES").DateTimeFormat.GetMonthName(mes).ToUpper();
     }
 
  

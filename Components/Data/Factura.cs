@@ -8,7 +8,7 @@
         public String Nombre { get; set; }=String.Empty;
 
         public int Total { get; set; }
-
+        
 
     }
 }
