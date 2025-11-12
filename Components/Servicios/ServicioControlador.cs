@@ -49,5 +49,9 @@ namespace HyMFacturan.Components.Servicios
         {
             return await _servicioFacturas.ObtenerArticulosPorFactura(facturaId);
         }
+        public async Task<List<Factura>> ObtenerFacturasPorAño(int año)
+        {
+            return await _servicioFacturas.ObtenerFacturaPorAño(año);
+        }
     }
 }

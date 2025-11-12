@@ -186,5 +186,28 @@ namespace HyMFacturan.Components.Data
             cmdSeqFact.CommandText = "DELETE FROM sqlite_sequence WHERE name = 'Facturas';";
             await cmdSeqFact.ExecuteNonQueryAsync();
         }
+        public async Task<List<Factura>> ObtenerFacturaPorAño(int año) 
+        { 
+        var FacturaLista= new List<Factura>();
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+            var comando = conexion.CreateCommand();
+            comando.CommandText= "SELECT Id, Fecha, Nombre, Total FROM Facturas WHERE strftime('%Y', Fecha) = $año ORDER BY Fecha;";
+            comando.Parameters.AddWithValue("$año", año.ToString());
+            using var lector = await comando.ExecuteReaderAsync();
+
+            while (await lector.ReadAsync())
+            {
+                FacturaLista.Add(new Factura
+                {
+                    Id = lector.GetInt32(0),
+                    Fecha = lector.IsDBNull(1) ? default(DateTime) : lector.GetDateTime(1),
+                    Nombre = lector.IsDBNull(2) ? string.Empty : lector.GetString(2),
+                    Total = lector.GetInt32(3)
+                });
+            }
+            return FacturaLista;
+
+        }
     }
 }
