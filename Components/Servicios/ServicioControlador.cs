@@ -45,5 +45,9 @@ namespace HyMFacturan.Components.Servicios
         {
             await _servicioFacturas.ActualizarTotalFactura(facturaId, nuevoTotal);
         }
+        public async Task<List<Articulo>> ObtenerArticulosPorFactura(int facturaId)
+        {
+            return await _servicioFacturas.ObtenerArticulosPorFactura(facturaId);
+        }
     }
 }

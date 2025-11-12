@@ -167,13 +167,24 @@ namespace HyMFacturan.Components.Data
             using var conexion = new SqliteConnection(_connectionString);
             await conexion.OpenAsync();
 
+       
             var cmdArticulos = conexion.CreateCommand();
             cmdArticulos.CommandText = "DELETE FROM Articulos;";
             await cmdArticulos.ExecuteNonQueryAsync();
 
+         
             var cmdFacturas = conexion.CreateCommand();
             cmdFacturas.CommandText = "DELETE FROM Facturas;";
             await cmdFacturas.ExecuteNonQueryAsync();
+
+           
+            var cmdSeqArt = conexion.CreateCommand();
+            cmdSeqArt.CommandText = "DELETE FROM sqlite_sequence WHERE name = 'Articulos';";
+            await cmdSeqArt.ExecuteNonQueryAsync();
+
+            var cmdSeqFact = conexion.CreateCommand();
+            cmdSeqFact.CommandText = "DELETE FROM sqlite_sequence WHERE name = 'Facturas';";
+            await cmdSeqFact.ExecuteNonQueryAsync();
         }
     }
 }
