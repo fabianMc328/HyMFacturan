@@ -10,11 +10,11 @@
 
 @if (!string.IsNullOrEmpty(mensajeError))
 {
-    <div style="color: red;">@mensajeError</div>
+    <div>@mensajeError</div>
 }
 @if (!string.IsNullOrEmpty(mensajeOk))
 {
-    <div style="color: green;">@mensajeOk</div>
+    <div>@mensajeOk</div>
 }
 
 <div>
@@ -54,7 +54,6 @@
                 }
             </tbody>
         </table>
-
         <h3>Total: @totalTemporal</h3>
     }
 
@@ -66,6 +65,7 @@
 </div>
 
 <hr />
+
 <h4>Facturas Guardadas</h4>
 @if (facturasGuardadas is null)
 {
@@ -77,13 +77,14 @@ else if (!facturasGuardadas.Any())
 }
 else
 {
-    <table>
+    <table border="1" width="100%">
         <thead>
             <tr>
                 <th>ID</th>
                 <th>Fecha</th>
                 <th>Nombre</th>
                 <th>Total</th>
+                <th>Artículos</th>
             </tr>
         </thead>
         <tbody>
@@ -93,7 +94,52 @@ else
                     <td>@f.Id</td>
                     <td>@f.Fecha.ToString("dd/MM/yyyy")</td>
                     <td>@f.Nombre</td>
-                    <td>@f.Total</td>
+                    <td><b>@f.Total</b></td>
+                    <td>
+                        @if (!articulosPorFactura.ContainsKey(f.Id))
+                        {
+                            <button @onclick="() => EjecutarAsync(() => CargarArticulos(f.Id), mostrarOk: false)">Ver artículos</button>
+                        }
+                        else
+                        {
+                            <button @onclick="() => OcultarArticulos(f.Id)">Ocultar</button>
+
+                            <table border="1" width="100%">
+                                <thead>
+                                    <tr>
+                                        <th>Nombre</th>
+                                        <th>Precio</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var art in articulosPorFactura[f.Id])
+                                    {
+                                        <tr>
+                                            @if (articuloEditando?.Id == art.Id)
+                                            {
+                                                <td><input @bind="articuloEditando.Nombre" /></td>
+                                                <td><input type="number" @bind="articuloEditando.Precio" /></td>
+                                                <td>
+                                                    <button @onclick="() => EjecutarAsync(() => GuardarEdicionArticulo(f))">Guardar</button>
+                                                    <button @onclick="CancelarEdicion">Cancelar</button>
+                                                </td>
+                                            }
+                                            else
+                                            {
+                                                <td>@art.Nombre</td>
+                                                <td>@art.Precio</td>
+                                                <td>
+                                                    <button @onclick="() => EditarArticulo(art)">Editar</button>
+                                                    <button @onclick="() => EjecutarAsync(() => EliminarArticulo(f, art.Id))">Eliminar</button>
+                                                </td>
+                                            }
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </td>
                 </tr>
             }
         </tbody>
@@ -107,28 +153,36 @@ else
 
 
 @code {
+   
     private List<Factura>? facturasGuardadas;
-    private Factura nuevaFactura = new() { Fecha = DateTime.Now };
-    private Articulo nuevoArticulo = new();        
-    private List<Articulo> articulosTemporales = new(); 
-    private int totalTemporal = 0;                  
-    
-
     private string mensajeError = string.Empty;
     private string mensajeOk = string.Empty;
+    private Factura nuevaFactura = new() { Fecha = DateTime.Now }; 
+    private Articulo nuevoArticulo = new();
+    private List<Articulo> articulosTemporales = new();
+    private int totalTemporal = 0;
+
+ 
+   
+    private Dictionary<int, List<Articulo>> articulosPorFactura = new();
+    private Articulo? articuloEditando;
+
 
     protected override async Task OnInitializedAsync()
     {
         await EjecutarAsync(Cargar, mostrarOk: false);
     }
 
- 
-
+    
     private void AñadirArticuloTemporal()
     {
         if (nuevoArticulo.Precio > 0 && !string.IsNullOrWhiteSpace(nuevoArticulo.Nombre))
         {
-            articulosTemporales.Add(nuevoArticulo);
+            articulosTemporales.Add(new Articulo
+            {
+                Nombre = nuevoArticulo.Nombre,
+                Precio = nuevoArticulo.Precio
+            });
             totalTemporal = articulosTemporales.Sum(a => a.Precio);
             nuevoArticulo = new();
         }
@@ -136,56 +190,137 @@ else
 
     private async Task GuardarFacturaCompleta()
     {
+        // Validaciones
         if (articulosTemporales.Count == 0)
         {
             mensajeError = "No se puede guardar una factura sin artículos.";
             return;
         }
-
-       
-
-     
         if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre))
         {
             mensajeError = "El campo Nombre Cliente es obligatorio.";
-            return; 
+            return;
         }
 
-
+     
         nuevaFactura.Total = totalTemporal;
         await servicio.GuardarFacturaCompleta(nuevaFactura, articulosTemporales);
-        nuevaFactura = new();
+
+     
+        nuevaFactura = new() { Fecha = DateTime.Now };
         articulosTemporales.Clear();
         totalTemporal = 0;
-        await Cargar();
+
+        await Cargar(); 
     }
 
+   
     private async Task Cargar()
     {
         facturasGuardadas = await servicio.ObtenerFacturas();
+        articulosPorFactura.Clear(); 
+        articuloEditando = null; 
     }
 
     private async Task Borrar()
     {
         await servicio.BorrarTodas();
         facturasGuardadas = new List<Factura>();
-        articulosTemporales.Clear();
-        totalTemporal = 0;
+        articulosPorFactura.Clear();
+        articuloEditando = null;
     }
+
+
+    private async Task CargarArticulos(int facturaId)
+    {
+   
+        var arts = await servicio.ObtenerArticulosPorFactura(facturaId);
+        articulosPorFactura[facturaId] = arts;
+        articuloEditando = null; 
+    }
+
+    private void OcultarArticulos(int facturaId)
+    {
+       
+        if (articulosPorFactura.ContainsKey(facturaId))
+        {
+            articulosPorFactura.Remove(facturaId);
+            articuloEditando = null; 
+        }
+    }
+
+    private void EditarArticulo(Articulo art)
+    {
+       
+        articuloEditando = new Articulo
+        {
+            Id = art.Id,
+            Nombre = art.Nombre,
+            Precio = art.Precio,
+            FacturaId = art.FacturaId
+        };
+    }
+
+    private void CancelarEdicion() => articuloEditando = null;
+
+    private async Task GuardarEdicionArticulo(Factura factura)
+    {
+        if (articuloEditando == null) return;
+
+      
+        await servicio.ActualizarArticulo(articuloEditando);
+
+       
+        articulosPorFactura[factura.Id] = await servicio.ObtenerArticulosPorFactura(factura.Id);
+
+     
+        int nuevoTotal = articulosPorFactura[factura.Id].Sum(a => a.Precio);
+
+  
+        await servicio.ActualizarTotalFactura(factura.Id, nuevoTotal);
+        factura.Total = nuevoTotal; 
+
+        articuloEditando = null; 
+        mensajeOk = "Artículo actualizado"; 
+    }
+
+    private async Task EliminarArticulo(Factura factura, int articuloId)
+    {
+      
+        await servicio.EliminarArticulo(articuloId);
+
+       
+        articulosPorFactura[factura.Id] = await servicio.ObtenerArticulosPorFactura(factura.Id);
+
+      
+        int nuevoTotal = articulosPorFactura[factura.Id].Sum(a => a.Precio);
+
+    
+        await servicio.ActualizarTotalFactura(factura.Id, nuevoTotal);
+        factura.Total = nuevoTotal;
+
+        mensajeOk = "Artículo eliminado"; 
+    }
+
+ 
     private async Task EjecutarAsync(Func<Task> accion, bool mostrarOk = true)
     {
         mensajeError = string.Empty;
         mensajeOk = string.Empty;
         try
         {
-            await accion();
-            if (mostrarOk)
-                mensajeOk = "";
+            await accion(); 
+
+        
+            if (mostrarOk && string.IsNullOrEmpty(mensajeOk))
+            {
+                mensajeOk = "Operación exitosa.";
+            }
         }
         catch (Exception ex)
         {
             mensajeError = $"Error: {ex.Message}";
         }
-        StateHasChanged();
+        StateHasChanged(); 
     }
 }
