@@ -209,5 +209,76 @@ namespace HyMFacturan.Components.Data
             return FacturaLista;
 
         }
+
+      
+
+        public async Task<DatosDashboard> ObtenerDatos()
+        {
+            var datos = new DatosDashboard();
+            using var conexion = new SqliteConnection(_connectionString);
+            await conexion.OpenAsync();
+
+            // 1. Total Dinero
+            var cmd1 = conexion.CreateCommand();
+            cmd1.CommandText = "SELECT IFNULL(SUM(Total), 0) FROM Facturas;";
+            var res1 = await cmd1.ExecuteScalarAsync();
+            datos.DineroTotal = res1 != null ? Convert.ToInt64(res1) : 0;
+
+            // 2. Producto mas vendido
+            var cmd2 = conexion.CreateCommand();
+            cmd2.CommandText = "SELECT Nombre, COUNT(*) as Cantidad FROM Articulos GROUP BY Nombre ORDER BY Cantidad DESC LIMIT 1;";
+            using (var lector = await cmd2.ExecuteReaderAsync())
+            {
+                if (await lector.ReadAsync())
+                {
+                    datos.ProductoTop = lector.GetString(0);
+                    datos.CantidadProducto = lector.GetInt32(1);
+                }
+            }
+
+            // 3. Mejor Cliente
+            var cmd3 = conexion.CreateCommand();
+            cmd3.CommandText = "SELECT Nombre FROM Facturas GROUP BY Nombre ORDER BY SUM(Total) DESC LIMIT 1;";
+            var res3 = await cmd3.ExecuteScalarAsync();
+            datos.ClienteTop = res3 != null ? res3.ToString() : "N/A";
+
+            // 4. Mejor Mes
+            var cmd4 = conexion.CreateCommand();
+            cmd4.CommandText = "SELECT strftime('%m', Fecha) as Mes, SUM(Total) as TotalVenta FROM Facturas GROUP BY Mes ORDER BY TotalVenta DESC LIMIT 1;";
+            var res4 = await cmd4.ExecuteScalarAsync();
+            if (res4 != null)
+            {
+                int m = int.Parse(res4.ToString());
+                datos.MesTop = NombreDelMes(m);
+            }
+
+            // 5. Peores 3 meses
+            var cmd5 = conexion.CreateCommand();
+            cmd5.CommandText = "SELECT strftime('%m', Fecha) as Mes, SUM(Total) as TotalVenta FROM Facturas GROUP BY Mes ORDER BY TotalVenta ASC LIMIT 3;";
+            using (var lector = await cmd5.ExecuteReaderAsync())
+            {
+                while (await lector.ReadAsync())
+                {
+                    int m = int.Parse(lector.GetString(0));
+                    long t = lector.GetInt64(1);
+                    datos.MesesMalos.Add(NombreDelMes(m) + " (" + t + ")");
+                }
+            }
+
+            return datos;
+        }
+
+        // Función auxiliar simple
+        private string NombreDelMes(int mes)
+        {
+            if (mes < 1 || mes > 12) return "Desconocido";
+            return System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(mes);
+        }
+
+
+
+
+
+
     }
 }

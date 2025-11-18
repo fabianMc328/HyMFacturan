@@ -53,5 +53,9 @@ namespace HyMFacturan.Components.Servicios
         {
             return await _servicioFacturas.ObtenerFacturaPorAño(año);
         }
+        public async Task<DatosDashboard> CargarDatosDashboard()
+        {
+            return await _servicioFacturas.ObtenerDatos();
+        }
     }
 }
