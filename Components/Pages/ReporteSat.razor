@@ -1,0 +1,78 @@
+﻿@page "/reporte"
+@rendermode InteractiveServer
+@using HyMFacturan.Components.Data
+@using HyMFacturan.Components.Servicios
+@inject ServicioControlador servicio
+@inject NavigationManager NavManager
+
+<h3>Reporte Anual SAT</h3>
+<button @onclick="Regresar">Volver al inicio</button>
+<hr />
+
+<div>
+    <label>Año:</label>
+    <input type="number" @bind="añoSeleccionado" />
+    <button @onclick="Generar">Generar Reporte</button>
+</div>
+<br />
+
+@if (listaPorMes.Any())
+{
+    <h4>Resultados del año @añoSeleccionado</h4>
+    @foreach (var mes in listaPorMes.Keys.OrderBy(m => m))
+    {
+        <div style="border: 1px solid black; margin-bottom: 10px; padding: 10px;">
+            <h4>@NombreMes(mes)</h4>
+            <table border="1" width="100%">
+                <thead><tr><th>Fecha</th><th>Cliente</th><th>Total</th></tr></thead>
+                <tbody>
+                    @foreach (var f in listaPorMes[mes])
+                    {
+                        <tr>
+                            <td>@f.Fecha.ToShortDateString()</td>
+                            <td>@f.Nombre</td>
+                            <td>@f.Total</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <p style="text-align: right;"><b>Total Mes: @totalesMes[mes]</b></p>
+        </div>
+    }
+    <div style="border-top: 2px solid black; text-align: right; margin-top: 20px;">
+        <h3>Total Anual: @granTotal</h3>
+    </div>
+}
+else if (buscado)
+{
+    <p>No se encontraron facturas en ese año.</p>
+}
+
+@code {
+    private int añoSeleccionado = DateTime.Now.Year;
+    private Dictionary<int, List<Factura>> listaPorMes = new();
+    private Dictionary<int, int> totalesMes = new();
+    private int granTotal = 0;
+    private bool buscado = false;
+
+    private async Task Generar()
+    {
+        buscado = true;
+        listaPorMes.Clear(); totalesMes.Clear(); granTotal = 0;
+
+        var facturas = await servicio.ObtenerFacturasPorAño(añoSeleccionado);
+        if (facturas.Any())
+        {
+            granTotal = facturas.Sum(f => f.Total);
+            listaPorMes = facturas.GroupBy(f => f.Fecha.Month).ToDictionary(g => g.Key, g => g.ToList());
+            totalesMes = listaPorMes.ToDictionary(k => k.Key, v => v.Value.Sum(f => f.Total));
+        }
+    }
+
+    private string NombreMes(int mes)
+    {
+        return System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(mes).ToUpper();
+    }
+
+    private void Regresar() => NavManager.NavigateTo("/vista");
+}

@@ -5,21 +5,25 @@
 @using HyMFacturan.Components.Servicios
 
 @inject ServicioControlador servicio
+@inject NavigationManager NavManager
 
-<h3>Gestión de Facturas</h3>
+<div style="margin-bottom: 15px;">
+    <h3>Gestión de Facturas</h3>
+    <button @onclick="IrAConsultas">📊 Ver Consultas</button>
+    <button @onclick="IrAReporte">📅 Reporte SAT</button>
+</div>
 
 @if (!string.IsNullOrEmpty(mensajeError))
 {
-    <div>@mensajeError</div>
+    <div style="color: red;">@mensajeError</div>
 }
 @if (!string.IsNullOrEmpty(mensajeOk))
 {
-    <div>@mensajeOk</div>
+    <div style="color: green;">@mensajeOk</div>
 }
 
-<div>
+<div style="border: 1px solid gray; padding: 10px; margin-bottom: 20px;">
     <h4>Nueva Factura</h4>
-
     <div>
         <label>Fecha:</label>
         <input type="date" @bind="nuevaFactura.Fecha" />
@@ -35,57 +39,44 @@
     <div>
         <input @bind="nuevoArticulo.Nombre" placeholder="Nombre del Artículo" />
         <input type="number" @bind="nuevoArticulo.Precio" placeholder="Precio" />
-        <button type="button" @onclick="AñadirArticuloTemporal">Añadir Artículo</button>
+        <button type="button" @onclick="AñadirArticuloTemporal">Añadir</button>
     </div>
 
     @if (articulosTemporales.Any())
     {
-        <table style="margin-top: 15px;">
-            <thead>
-                <tr><th>Artículo</th><th>Precio</th></tr>
-            </thead>
+        <table border="1" width="50%" style="margin-top: 10px;">
+            <thead><tr><th>Artículo</th><th>Precio</th></tr></thead>
             <tbody>
                 @foreach (var art in articulosTemporales)
                 {
-                    <tr>
-                        <td>@art.Nombre</td>
-                        <td>@art.Precio</td>
-                    </tr>
+                    <tr><td>@art.Nombre</td><td>@art.Precio</td></tr>
                 }
             </tbody>
         </table>
         <h3>Total: @totalTemporal</h3>
     }
 
-    <div style="margin-top: 20px;">
-        <button type="button" @onclick="() => EjecutarAsync(GuardarFacturaCompleta)">
-            Guardar Factura Completa
-        </button>
+    <div style="margin-top: 10px;">
+        <button type="button" @onclick="GuardarFacturaCompleta">Guardar Factura Completa</button>
     </div>
 </div>
 
 <hr />
 
-<h4>Facturas Guardadas</h4>
-@if (facturasGuardadas is null)
+<h4>Lista de Facturas Guardadas</h4>
+@if (facturasGuardadas == null)
 {
     <p>Cargando...</p>
 }
 else if (!facturasGuardadas.Any())
 {
-    <p>No hay facturas guardadas.</p>
+    <p>No hay facturas.</p>
 }
 else
 {
     <table border="1" width="100%">
         <thead>
-            <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Nombre</th>
-                <th>Total</th>
-                <th>Artículos</th>
-            </tr>
+            <tr><th>ID</th><th>Fecha</th><th>Nombre</th><th>Total</th><th>Acciones</th></tr>
         </thead>
         <tbody>
             @foreach (var f in facturasGuardadas)
@@ -98,148 +89,90 @@ else
                     <td>
                         @if (!articulosPorFactura.ContainsKey(f.Id))
                         {
-                            <button @onclick="() => EjecutarAsync(() => CargarArticulos(f.Id), mostrarOk: false)">Ver artículos</button>
+                            <button @onclick="() => CargarArticulos(f.Id)">Ver detalles</button>
                         }
                         else
                         {
                             <button @onclick="() => OcultarArticulos(f.Id)">Ocultar</button>
-
-                            <table border="1" width="100%">
-                                <thead>
-                                    <tr>
-                                        <th>Nombre</th>
-                                        <th>Precio</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach (var art in articulosPorFactura[f.Id])
-                                    {
-                                        <tr>
-                                            @if (articuloEditando?.Id == art.Id)
-                                            {
-                                                <td><input @bind="articuloEditando.Nombre" /></td>
-                                                <td><input type="number" @bind="articuloEditando.Precio" /></td>
-                                                <td>
-                                                    <button @onclick="() => EjecutarAsync(() => GuardarEdicionArticulo(f))">Guardar</button>
-                                                    <button @onclick="CancelarEdicion">Cancelar</button>
-                                                </td>
-                                            }
-                                            else
-                                            {
-                                                <td>@art.Nombre</td>
-                                                <td>@art.Precio</td>
-                                                <td>
-                                                    <button @onclick="() => EditarArticulo(art)">Editar</button>
-                                                    <button @onclick="() => EjecutarAsync(() => EliminarArticulo(f, art.Id))">Eliminar</button>
-                                                </td>
-                                            }
-                                        </tr>
-                                    }
-                                </tbody>
-                            </table>
                         }
                     </td>
                 </tr>
+                @if (articulosPorFactura.ContainsKey(f.Id))
+                {
+                    <tr>
+                        <td colspan="5">
+                            <div style="padding: 10px; background-color: #f0f0f0;">
+                                <h5>Artículos de factura #@f.Id</h5>
+                                <table border="1" width="100%">
+                                    <thead><tr><th>Producto</th><th>Precio</th><th>Opciones</th></tr></thead>
+                                    <tbody>
+                                        @foreach (var art in articulosPorFactura[f.Id])
+                                        {
+                                            <tr>
+                                                @if (articuloEditando?.Id == art.Id)
+                                                {
+                                                    <td><input @bind="articuloEditando.Nombre" /></td>
+                                                    <td><input type="number" @bind="articuloEditando.Precio" /></td>
+                                                    <td>
+                                                        <button @onclick="() => GuardarEdicionArticulo(f)">Guardar</button>
+                                                        <button @onclick="CancelarEdicion">Cancelar</button>
+                                                    </td>
+                                                }
+                                                else
+                                                {
+                                                    <td>@art.Nombre</td>
+                                                    <td>@art.Precio</td>
+                                                    <td>
+                                                        <button @onclick="() => EditarArticulo(art)">Editar</button>
+                                                        <button @onclick="() => EliminarArticulo(f, art.Id)">Borrar</button>
+                                                    </td>
+                                                }
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    </tr>
+                }
             }
         </tbody>
     </table>
 }
 
-<h4>Reporte Anual SAT</h4>
-<div>
-    <label>Seleccionar Año:</label>
-    <input type="number" min="2000" max="2100" @bind="añoReporte" />
-    <button @onclick="() => EjecutarAsync(GenerarReporte, mostrarOk: false)">Generar Reporte</button>
-</div>
-
-@if (FacturasPormes.Any())
-{
-    <h5>Reporte para el año @añoReporte</h5>
-
-    @foreach (var mesNumero in FacturasPormes.Keys.OrderBy(m => m))
-    {
-        <div style="margin-top: 20px; border: 1px solid #ccc; padding: 10px;">
-            <h4>@ObtenerNombreMes(mesNumero)</h4>
-            <table border="1" width="100%">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Fecha</th>
-                        <th>Nombre</th>
-                        <th>Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var factura in FacturasPormes[mesNumero])
-                    {
-                        <tr>
-                            <td>@factura.Id</td>
-                            <td>@factura.Fecha.ToString("dd/MM/yyyy")</td>
-                            <td>@factura.Nombre</td>
-                            <td>@factura.Total</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            <h5 style="text-align: right; margin-top: 10px;">
-                Total Mes: <b>@TotalesPorMes[mesNumero]</b>
-            </h5>
-            @if (mesNumero == ultimoMesFacturado)
-            {
-                <h4 style="text-align: right; margin-top: 15px; border-top: 2px solid black; padding-top: 10px;">
-                    Total Anual (@añoReporte): <b>@totalAnualReporte</b>
-                </h4>
-            }
-        </div>
-    }
-}
-else
-{
-    <p>No hay datos de reporte para mostrar.</p>
-}
-<div style="margin-top: 8px;">
-    <button type="button" @onclick="() => EjecutarAsync(Cargar)">Cargar Facturas</button>
-    <button type="button" @onclick="() => EjecutarAsync(Borrar)">Borrar todas</button>
+<div style="margin-top: 20px;">
+    <button @onclick="Cargar">Recargar Lista</button>
+    <button @onclick="Borrar">Borrar Todo</button>
 </div>
 
 @code {
-
     private List<Factura>? facturasGuardadas;
     private string mensajeError = string.Empty;
     private string mensajeOk = string.Empty;
-    private Factura nuevaFactura = new() { Fecha = DateTime.Now }; 
+
+    private Factura nuevaFactura = new() { Fecha = DateTime.Now };
     private Articulo nuevoArticulo = new();
     private List<Articulo> articulosTemporales = new();
     private int totalTemporal = 0;
-    private int añoReporte = DateTime.Now.Year;
-    private Dictionary<int, List<Factura>> FacturasPormes = new();
-    private Dictionary<int, int> TotalesPorMes = new();
-    private int totalAnualReporte = 0;
-    private int ultimoMesFacturado = 0;
-
-
-
 
     private Dictionary<int, List<Articulo>> articulosPorFactura = new();
     private Articulo? articuloEditando;
 
-
     protected override async Task OnInitializedAsync()
     {
-        await EjecutarAsync(Cargar, mostrarOk: false);
+        await Cargar();
     }
 
+    // Navegación
+    private void IrAConsultas() => NavManager.NavigateTo("/consultas");
+    private void IrAReporte() => NavManager.NavigateTo("/reporte");
 
+    // Lógica de Facturas
     private void AñadirArticuloTemporal()
     {
         if (nuevoArticulo.Precio > 0 && !string.IsNullOrWhiteSpace(nuevoArticulo.Nombre))
         {
-            articulosTemporales.Add(new Articulo
-            {
-                Nombre = nuevoArticulo.Nombre,
-                Precio = nuevoArticulo.Precio
-            });
+            articulosTemporales.Add(new Articulo { Nombre = nuevoArticulo.Nombre, Precio = nuevoArticulo.Precio });
             totalTemporal = articulosTemporales.Sum(a => a.Precio);
             nuevoArticulo = new();
         }
@@ -247,177 +180,69 @@ else
 
     private async Task GuardarFacturaCompleta()
     {
-        // Validaciones
-        if (articulosTemporales.Count == 0)
-        {
-            mensajeError = "No se puede guardar una factura sin artículos.";
-            return;
-        }
-        if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre))
-        {
-            mensajeError = "El campo Nombre Cliente es obligatorio.";
-            return;
-        }
-
+        mensajeError = ""; mensajeOk = "";
+        if (articulosTemporales.Count == 0) { mensajeError = "Sin artículos."; return; }
+        if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre)) { mensajeError = "Falta nombre."; return; }
 
         nuevaFactura.Total = totalTemporal;
         await servicio.GuardarFacturaCompleta(nuevaFactura, articulosTemporales);
 
-
         nuevaFactura = new() { Fecha = DateTime.Now };
         articulosTemporales.Clear();
         totalTemporal = 0;
-
-        await Cargar(); 
+        mensajeOk = "Guardado.";
+        await Cargar();
     }
-
 
     private async Task Cargar()
     {
         facturasGuardadas = await servicio.ObtenerFacturas();
-        articulosPorFactura.Clear(); 
-        articuloEditando = null; 
+        articulosPorFactura.Clear();
+        articuloEditando = null;
     }
 
     private async Task Borrar()
     {
         await servicio.BorrarTodas();
-        facturasGuardadas = new List<Factura>();
-        articulosPorFactura.Clear();
-        articuloEditando = null;
+        await Cargar();
     }
 
-
-    private async Task CargarArticulos(int facturaId)
+ 
+    private async Task CargarArticulos(int fid)
     {
-
-        var arts = await servicio.ObtenerArticulosPorFactura(facturaId);
-        articulosPorFactura[facturaId] = arts;
-        articuloEditando = null; 
+        articulosPorFactura[fid] = await servicio.ObtenerArticulosPorFactura(fid);
     }
 
-    private void OcultarArticulos(int facturaId)
+    private void OcultarArticulos(int fid)
     {
-
-        if (articulosPorFactura.ContainsKey(facturaId))
-        {
-            articulosPorFactura.Remove(facturaId);
-            articuloEditando = null; 
-        }
+        articulosPorFactura.Remove(fid);
     }
 
     private void EditarArticulo(Articulo art)
     {
-
-        articuloEditando = new Articulo
-        {
-            Id = art.Id,
-            Nombre = art.Nombre,
-            Precio = art.Precio,
-            FacturaId = art.FacturaId
-        };
+        articuloEditando = new Articulo { Id = art.Id, Nombre = art.Nombre, Precio = art.Precio, FacturaId = art.FacturaId };
     }
 
     private void CancelarEdicion() => articuloEditando = null;
 
-    private async Task GuardarEdicionArticulo(Factura factura)
+    private async Task GuardarEdicionArticulo(Factura f)
     {
         if (articuloEditando == null) return;
-
-
         await servicio.ActualizarArticulo(articuloEditando);
+        await CargarArticulos(f.Id);
 
-
-        articulosPorFactura[factura.Id] = await servicio.ObtenerArticulosPorFactura(factura.Id);
-
-
-        int nuevoTotal = articulosPorFactura[factura.Id].Sum(a => a.Precio);
-
-
-        await servicio.ActualizarTotalFactura(factura.Id, nuevoTotal);
-        factura.Total = nuevoTotal; 
-
-        articuloEditando = null; 
-        mensajeOk = "Artículo actualizado"; 
+        int nuevoTotal = articulosPorFactura[f.Id].Sum(a => a.Precio);
+        await servicio.ActualizarTotalFactura(f.Id, nuevoTotal);
+        f.Total = nuevoTotal;
+        articuloEditando = null;
     }
 
-    private async Task EliminarArticulo(Factura factura, int articuloId)
+    private async Task EliminarArticulo(Factura f, int aid)
     {
-
-        await servicio.EliminarArticulo(articuloId);
-
-
-        articulosPorFactura[factura.Id] = await servicio.ObtenerArticulosPorFactura(factura.Id);
-
-
-        int nuevoTotal = articulosPorFactura[factura.Id].Sum(a => a.Precio);
-
-
-        await servicio.ActualizarTotalFactura(factura.Id, nuevoTotal);
-        factura.Total = nuevoTotal;
-
-        mensajeOk = "Artículo eliminado"; 
-    }
-    private async Task GenerarReporte()
-    {
-
-        FacturasPormes.Clear();
-        TotalesPorMes.Clear();
-        totalAnualReporte = 0;
-        ultimoMesFacturado = 0;
-        var FacturasDelAño = await servicio.ObtenerFacturasPorAño(añoReporte);
-
-
-        if (FacturasDelAño.Any())
-        {
-            totalAnualReporte = FacturasDelAño.Sum(f => f.Total);
-           
-            FacturasPormes = FacturasDelAño
-                .GroupBy(f => f.Fecha.Month)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            TotalesPorMes = FacturasPormes
-                .ToDictionary(
-                    kvp => kvp.Key, 
-                    kvp => kvp.Value.Sum(f => f.Total) 
-                );
-            if (FacturasPormes.Keys.Any())
-            {
-                ultimoMesFacturado = FacturasPormes.Keys.Max();
-            }
-        }
-        else
-        {
-            mensajeOk = "No se encontraron facturas para el año " + añoReporte;
-        }
-
-
-    }
-    private string ObtenerNombreMes(int mes)
-    {
-  
-        return new System.Globalization.CultureInfo("es-ES").DateTimeFormat.GetMonthName(mes).ToUpper();
-    }
-
- 
-    private async Task EjecutarAsync(Func<Task> accion, bool mostrarOk = true)
-    {
-        mensajeError = string.Empty;
-        mensajeOk = string.Empty;
-        try
-        {
-            await accion(); 
-
-        
-            if (mostrarOk && string.IsNullOrEmpty(mensajeOk))
-            {
-                mensajeOk = "Operación exitosa.";
-            }
-        }
-        catch (Exception ex)
-        {
-            mensajeError = $"Error: {ex.Message}";
-        }
-        StateHasChanged(); 
+        await servicio.EliminarArticulo(aid);
+        await CargarArticulos(f.Id);
+        int nuevoTotal = articulosPorFactura[f.Id].Sum(a => a.Precio);
+        await servicio.ActualizarTotalFactura(f.Id, nuevoTotal);
+        f.Total = nuevoTotal;
     }
 }

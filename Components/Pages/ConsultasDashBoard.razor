@@ -1,0 +1,76 @@
+﻿@page "/consultas"
+@rendermode InteractiveServer
+@using HyMFacturan.Components.Data
+@using HyMFacturan.Components.Servicios
+@inject ServicioControlador servicio
+@inject NavigationManager NavManager
+
+<h3>Panel de Consultas</h3>
+<button @onclick="Regresar">Volver al inicio</button>
+<hr />
+
+@if (cargando)
+{
+    <p>Cargando...</p>
+}
+else
+{
+    <div>
+
+        <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
+            <h4>Total Ingresos</h4>
+            <p style="font-size: 20px;"><b>$@datos.DineroTotal</b></p>
+        </div>
+
+        <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
+            <h4>Artículo más vendido</h4>
+            <p>Nombre: <b>@datos.ProductoTop</b></p>
+            <p>Cantidad: @datos.CantidadProducto</p>
+        </div>
+
+        <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
+            <h4>Mejor Cliente</h4>
+            <p><b>@datos.ClienteTop</b></p>
+        </div>
+
+        <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
+            <h4>Mes con más ventas</h4>
+            <p><b>@datos.MesTop</b></p>
+        </div>
+
+        <div style="border: 1px solid black; padding: 10px; margin-bottom: 10px;">
+            <h4>Meses con menos ventas (Top 3)</h4>
+            <ul>
+                @foreach (var mes in datos.MesesMalos)
+                {
+                    <li>@mes</li>
+                }
+            </ul>
+        </div>
+
+    </div>
+
+    <button @onclick="Actualizar">Actualizar datos</button>
+}
+
+@code {
+    private DatosDashboard datos = new();
+    private bool cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Actualizar();
+    }
+
+    private async Task Actualizar()
+    {
+        cargando = true;
+        datos = await servicio.CargarDatosDashboard();
+        cargando = false;
+    }
+
+    private void Regresar()
+    {
+        NavManager.NavigateTo("/vista");
+    }
+}
