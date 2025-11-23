@@ -2,6 +2,15 @@ h1:focus {
     outline: none;
 }
 
+.hover-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+    .hover-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+    }
+
 .valid.modified:not([type=checkbox]) {
     outline: 1px solid #26b050;
 }

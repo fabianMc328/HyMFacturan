@@ -5,50 +5,85 @@
 @inject ServicioControlador servicio
 @inject NavigationManager NavManager
 
-<h3>Reporte Anual SAT</h3>
-<button @onclick="Regresar">Volver al inicio</button>
-<hr />
-
-<div>
-    <label>Año:</label>
-    <input type="number" @bind="añoSeleccionado" />
-    <button @onclick="Generar">Generar Reporte</button>
-</div>
-<br />
-
-@if (listaPorMes.Any())
-{
-    <h4>Resultados del año @añoSeleccionado</h4>
-    @foreach (var mes in listaPorMes.Keys.OrderBy(m => m))
-    {
-        <div style="border: 1px solid black; margin-bottom: 10px; padding: 10px;">
-            <h4>@NombreMes(mes)</h4>
-            <table border="1" width="100%">
-                <thead><tr><th>Fecha</th><th>Cliente</th><th>Total</th></tr></thead>
-                <tbody>
-                    @foreach (var f in listaPorMes[mes])
-                    {
-                        <tr>
-                            <td>@f.Fecha.ToShortDateString()</td>
-                            <td>@f.Nombre</td>
-                            <td>@f.Total</td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-            <p style="text-align: right;"><b>Total Mes: @totalesMes[mes]</b></p>
+<div class="container mt-4">
+    <div class="card border-0 shadow-lg">
+        <div class="card-header bg-dark text-white py-4 d-flex justify-content-between align-items-center">
+            <div>
+                <h3 class="mb-0 fw-bold"><i class="bi bi-building me-2"></i>Reporte Fiscal Anual</h3>
+                <small class="opacity-75">Sistema de Auditoría Interna</small>
+            </div>
+            <button class="btn btn-outline-light btn-sm" @onclick="Regresar">Volver</button>
         </div>
-    }
-    <div style="border-top: 2px solid black; text-align: right; margin-top: 20px;">
-        <h3>Total Anual: @granTotal</h3>
+
+        <div class="card-body p-5 bg-light">
+            <div class="row justify-content-center mb-5">
+                <div class="col-md-6">
+                    <div class="input-group input-group-lg shadow-sm">
+                        <span class="input-group-text bg-white border-0 fw-bold">Año Fiscal</span>
+                        <input type="number" class="form-control border-0" @bind="añoSeleccionado" />
+                        <button class="btn btn-primary px-4 fw-bold" @onclick="Generar">Generar Informe</button>
+                    </div>
+                </div>
+            </div>
+
+            @if (listaPorMes.Any())
+            {
+                <div class="bg-white p-5 shadow-sm rounded-3">
+                    <div class="text-center mb-4 pb-4 border-bottom">
+                        <h2 class="fw-bold">Ejercicio Fiscal @añoSeleccionado</h2>
+                        <span class="badge bg-success fs-5 px-4 py-2 mt-2">Ingreso Anual: $@granTotal.ToString("N0")</span>
+                    </div>
+
+                    <div class="accordion" id="accordionReporte">
+                        @foreach (var mes in listaPorMes.Keys.OrderBy(m => m))
+                        {
+                            <div class="accordion-item border-0 mb-3 shadow-sm rounded overflow-hidden">
+                                <h2 class="accordion-header">
+                                    <button class="accordion-button collapsed fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-@mes">
+                                        <div class="d-flex justify-content-between w-100 me-3">
+                                            <span><i class="bi bi-calendar-event me-2 text-primary"></i>@NombreMes(mes)</span>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary">$@totalesMes[mes].ToString("N0")</span>
+                                        </div>
+                                    </button>
+                                </h2>
+                                <div id="collapse-@mes" class="accordion-collapse collapse" data-bs-parent="#accordionReporte">
+                                    <div class="accordion-body p-0">
+                                        <table class="table table-striped mb-0 small">
+                                            <thead class="table-dark">
+                                                <tr><th>Fecha</th><th>Cliente</th><th class="text-end">Monto</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var f in listaPorMes[mes])
+                                                {
+                                                    <tr>
+                                                        <td>@f.Fecha.ToShortDateString()</td>
+                                                        <td>@f.Nombre</td>
+                                                        <td class="text-end">$@f.Total</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            }
+            else if (buscado)
+            {
+                <div class="alert alert-warning text-center p-5 shadow-sm">
+                    <i class="bi bi-search fs-1 d-block mb-3"></i>
+                    <h4>No se encontraron registros</h4>
+                    <p>No hay facturas registradas para el año @añoSeleccionado.</p>
+                </div>
+            }
+        </div>
     </div>
-}
-else if (buscado)
-{
-    <p>No se encontraron facturas en ese año.</p>
-}
+</div>
 
 @code {
+ 
     private int añoSeleccionado = DateTime.Now.Year;
     private Dictionary<int, List<Factura>> listaPorMes = new();
     private Dictionary<int, int> totalesMes = new();

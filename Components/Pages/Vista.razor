@@ -7,145 +7,213 @@
 @inject ServicioControlador servicio
 @inject NavigationManager NavManager
 
-<div style="margin-bottom: 15px;">
-    <h3>Gestión de Facturas</h3>
-    <button @onclick="IrAConsultas">📊 Ver Consultas</button>
-    <button @onclick="IrAReporte">📅 Reporte SAT</button>
-</div>
-
-@if (!string.IsNullOrEmpty(mensajeError))
-{
-    <div style="color: red;">@mensajeError</div>
-}
-@if (!string.IsNullOrEmpty(mensajeOk))
-{
-    <div style="color: green;">@mensajeOk</div>
-}
-
-<div style="border: 1px solid gray; padding: 10px; margin-bottom: 20px;">
-    <h4>Nueva Factura</h4>
-    <div>
-        <label>Fecha:</label>
-        <input type="date" @bind="nuevaFactura.Fecha" />
-    </div>
-    <div>
-        <label>Nombre Cliente:</label>
-        <input @bind="nuevaFactura.Nombre" placeholder="Nombre" />
+<div class="container-fluid p-4 bg-light min-vh-100">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold text-dark mb-0"><i class="bi bi-receipt me-2"></i>Gestión de Facturación</h3>
+            <p class="text-muted small">Administra tus ventas y clientes</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-white border shadow-sm hover-card" @onclick="IrAConsultas">
+                <i class="bi bi-bar-chart-fill text-primary me-2"></i>Dashboard
+            </button>
+            <button class="btn btn-white border shadow-sm hover-card" @onclick="IrAReporte">
+                <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Reporte SAT
+            </button>
+        </div>
     </div>
 
-    <hr />
-
-    <h5>Añadir Artículos</h5>
-    <div>
-        <input @bind="nuevoArticulo.Nombre" placeholder="Nombre del Artículo" />
-        <input type="number" @bind="nuevoArticulo.Precio" placeholder="Precio" />
-        <button type="button" @onclick="AñadirArticuloTemporal">Añadir</button>
-    </div>
-
-    @if (articulosTemporales.Any())
+    @if (!string.IsNullOrEmpty(mensajeError))
     {
-        <table border="1" width="50%" style="margin-top: 10px;">
-            <thead><tr><th>Artículo</th><th>Precio</th></tr></thead>
-            <tbody>
-                @foreach (var art in articulosTemporales)
-                {
-                    <tr><td>@art.Nombre</td><td>@art.Precio</td></tr>
-                }
-            </tbody>
-        </table>
-        <h3>Total: @totalTemporal</h3>
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-octagon me-2"></i>@mensajeError
+            <button type="button" class="btn-close" @onclick='() => mensajeError = ""'></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(mensajeOk))
+    {
+        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-check-circle me-2"></i>@mensajeOk
+            <button type="button" class="btn-close" @onclick='() => mensajeOk = ""'></button>
+        </div>
     }
 
-    <div style="margin-top: 10px;">
-        <button type="button" @onclick="GuardarFacturaCompleta">Guardar Factura Completa</button>
-    </div>
-</div>
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title mb-0 fw-bold text-primary">Nueva Venta</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Fecha</label>
+                        <input type="date" class="form-control" @bind="nuevaFactura.Fecha" />
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label small text-muted text-uppercase fw-bold">Cliente</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="bi bi-person"></i></span>
+                            <input class="form-control" @bind="nuevaFactura.Nombre" placeholder="Ej. Juan Pérez" />
+                        </div>
+                    </div>
 
-<hr />
+                    <hr class="my-4 text-muted">
 
-<h4>Lista de Facturas Guardadas</h4>
-@if (facturasGuardadas == null)
-{
-    <p>Cargando...</p>
-}
-else if (!facturasGuardadas.Any())
-{
-    <p>No hay facturas.</p>
-}
-else
-{
-    <table border="1" width="100%">
-        <thead>
-            <tr><th>ID</th><th>Fecha</th><th>Nombre</th><th>Total</th><th>Acciones</th></tr>
-        </thead>
-        <tbody>
-            @foreach (var f in facturasGuardadas)
-            {
-                <tr>
-                    <td>@f.Id</td>
-                    <td>@f.Fecha.ToString("dd/MM/yyyy")</td>
-                    <td>@f.Nombre</td>
-                    <td><b>@f.Total</b></td>
-                    <td>
-                        @if (!articulosPorFactura.ContainsKey(f.Id))
-                        {
-                            <button @onclick="() => CargarArticulos(f.Id)">Ver detalles</button>
-                        }
-                        else
-                        {
-                            <button @onclick="() => OcultarArticulos(f.Id)">Ocultar</button>
-                        }
-                    </td>
-                </tr>
-                @if (articulosPorFactura.ContainsKey(f.Id))
-                {
-                    <tr>
-                        <td colspan="5">
-                            <div style="padding: 10px; background-color: #f0f0f0;">
-                                <h5>Artículos de factura #@f.Id</h5>
-                                <table border="1" width="100%">
-                                    <thead><tr><th>Producto</th><th>Precio</th><th>Opciones</th></tr></thead>
-                                    <tbody>
-                                        @foreach (var art in articulosPorFactura[f.Id])
-                                        {
-                                            <tr>
-                                                @if (articuloEditando?.Id == art.Id)
+                    <h6 class="fw-bold mb-3">Carrito de Compras</h6>
+                    <div class="row g-2 mb-3">
+                        <div class="col-7">
+                            <input class="form-control form-control-sm" @bind="nuevoArticulo.Nombre" placeholder="Producto" />
+                        </div>
+                        <div class="col-3">
+                            <input type="number" class="form-control form-control-sm" @bind="nuevoArticulo.Precio" placeholder="$" />
+                        </div>
+                        <div class="col-2">
+                            <button class="btn btn-primary btn-sm w-100" @onclick="AñadirArticuloTemporal">
+                                <i class="bi bi-plus-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    @if (articulosTemporales.Any())
+                    {
+                        <div class="bg-light p-3 rounded-3 mb-3">
+                            <ul class="list-unstyled mb-0">
+                                @foreach (var art in articulosTemporales)
+                                {
+                                    <li class="d-flex justify-content-between border-bottom pb-1 mb-1 small">
+                                        <span>@art.Nombre</span>
+                                        <span class="fw-bold">$@art.Precio</span>
+                                    </li>
+                                }
+                            </ul>
+                            <div class="d-flex justify-content-between mt-2 pt-2 border-top border-dark">
+                                <span class="fw-bold">Total Estimado:</span>
+                                <span class="fw-bold text-success fs-5">$@totalTemporal</span>
+                            </div>
+                        </div>
+                        <button class="btn btn-success w-100 py-2 fw-bold shadow-sm" @onclick="GuardarFacturaCompleta">
+                            <i class="bi bi-check2-circle me-2"></i>Confirmar Venta
+                        </button>
+                    }
+                    else
+                    {
+                        <div class="text-center py-4 text-muted border border-dashed rounded-3">
+                            <i class="bi bi-cart-x fs-4 d-block mb-2"></i>
+                            <small>Carrito vacío</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0 fw-bold">Historial de Transacciones</h5>
+                    <div class="btn-group">
+                        <button class="btn btn-outline-secondary btn-sm" @onclick="Cargar" title="Recargar"><i class="bi bi-arrow-clockwise"></i></button>
+                        <button class="btn btn-outline-danger btn-sm" @onclick="Borrar" title="Limpiar Base de Datos"><i class="bi bi-trash"></i></button>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    @if (facturasGuardadas == null)
+                    {
+                        <div class="text-center py-5"><div class="spinner-border text-primary"></div></div>
+                    }
+                    else if (!facturasGuardadas.Any())
+                    {
+                        <div class="text-center py-5 text-muted">No hay registros aún.</div>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4">ID</th>
+                                        <th>Fecha</th>
+                                        <th>Cliente</th>
+                                        <th>Total</th>
+                                        <th class="text-end pe-4">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var f in facturasGuardadas)
+                                    {
+                                        <tr>
+                                            <td class="ps-4 text-muted">#@f.Id</td>
+                                            <td>@f.Fecha.ToString("dd MMM yyyy")</td>
+                                            <td class="fw-bold">@f.Nombre</td>
+                                            <td><span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">$@f.Total</span></td>
+                                            <td class="text-end pe-4">
+                                                @if (!articulosPorFactura.ContainsKey(f.Id))
                                                 {
-                                                    <td><input @bind="articuloEditando.Nombre" /></td>
-                                                    <td><input type="number" @bind="articuloEditando.Precio" /></td>
-                                                    <td>
-                                                        <button @onclick="() => GuardarEdicionArticulo(f)">Guardar</button>
-                                                        <button @onclick="CancelarEdicion">Cancelar</button>
-                                                    </td>
+                                                    <button class="btn btn-sm btn-light border" @onclick="() => CargarArticulos(f.Id)">
+                                                        Ver Detalles <i class="bi bi-chevron-down ms-1"></i>
+                                                    </button>
                                                 }
                                                 else
                                                 {
-                                                    <td>@art.Nombre</td>
-                                                    <td>@art.Precio</td>
-                                                    <td>
-                                                        <button @onclick="() => EditarArticulo(art)">Editar</button>
-                                                        <button @onclick="() => EliminarArticulo(f, art.Id)">Borrar</button>
-                                                    </td>
+                                                    <button class="btn btn-sm btn-secondary" @onclick="() => OcultarArticulos(f.Id)">
+                                                        Ocultar <i class="bi bi-chevron-up ms-1"></i>
+                                                    </button>
                                                 }
+                                            </td>
+                                        </tr>
+                                        @if (articulosPorFactura.ContainsKey(f.Id))
+                                        {
+                                            <tr class="bg-light">
+                                                <td colspan="5" class="p-4">
+                                                    <div class="card border shadow-sm">
+                                                        <div class="card-header bg-white fw-bold small text-uppercase">Items de la Factura #@f.Id</div>
+                                                        <div class="card-body p-0">
+                                                            <table class="table table-sm mb-0">
+                                                                <thead class="text-muted small"><tr><th class="ps-3">Item</th><th>Precio</th><th class="text-end pe-3">Gestión</th></tr></thead>
+                                                                <tbody>
+                                                                    @foreach (var art in articulosPorFactura[f.Id])
+                                                                    {
+                                                                        <tr>
+                                                                            @if (articuloEditando?.Id == art.Id)
+                                                                            {
+                                                                                <td class="ps-3"><input class="form-control form-control-sm" @bind="articuloEditando.Nombre" /></td>
+                                                                                <td><input type="number" class="form-control form-control-sm" @bind="articuloEditando.Precio" /></td>
+                                                                                <td class="text-end pe-3">
+                                                                                    <button class="btn btn-success btn-sm" @onclick="() => GuardarEdicionArticulo(f)"><i class="bi bi-check"></i></button>
+                                                                                    <button class="btn btn-outline-secondary btn-sm" @onclick="CancelarEdicion"><i class="bi bi-x"></i></button>
+                                                                                </td>
+                                                                            }
+                                                                            else
+                                                                            {
+                                                                                <td class="ps-3">@art.Nombre</td>
+                                                                                <td>$@art.Precio</td>
+                                                                                <td class="text-end pe-3">
+                                                                                    <button class="btn btn-link btn-sm text-primary p-0 me-2" @onclick="() => EditarArticulo(art)"><i class="bi bi-pencil"></i></button>
+                                                                                    <button class="btn btn-link btn-sm text-danger p-0" @onclick="() => EliminarArticulo(f, art.Id)"><i class="bi bi-trash"></i></button>
+                                                                                </td>
+                                                                            }
+                                                                        </tr>
+                                                                    }
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                             </tr>
                                         }
-                                    </tbody>
-                                </table>
-                            </div>
-                        </td>
-                    </tr>
-                }
-            }
-        </tbody>
-    </table>
-}
-
-<div style="margin-top: 20px;">
-    <button @onclick="Cargar">Recargar Lista</button>
-    <button @onclick="Borrar">Borrar Todo</button>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 @code {
+   
+
     private List<Factura>? facturasGuardadas;
     private string mensajeError = string.Empty;
     private string mensajeOk = string.Empty;
@@ -163,11 +231,9 @@ else
         await Cargar();
     }
 
-    // Navegación
     private void IrAConsultas() => NavManager.NavigateTo("/consultas");
     private void IrAReporte() => NavManager.NavigateTo("/reporte");
 
-    // Lógica de Facturas
     private void AñadirArticuloTemporal()
     {
         if (nuevoArticulo.Precio > 0 && !string.IsNullOrWhiteSpace(nuevoArticulo.Nombre))
@@ -181,8 +247,8 @@ else
     private async Task GuardarFacturaCompleta()
     {
         mensajeError = ""; mensajeOk = "";
-        if (articulosTemporales.Count == 0) { mensajeError = "Sin artículos."; return; }
-        if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre)) { mensajeError = "Falta nombre."; return; }
+        if (articulosTemporales.Count == 0) { mensajeError = "Agrega al menos un artículo al carrito."; return; }
+        if (string.IsNullOrWhiteSpace(nuevaFactura.Nombre)) { mensajeError = "Ingresa el nombre del cliente."; return; }
 
         nuevaFactura.Total = totalTemporal;
         await servicio.GuardarFacturaCompleta(nuevaFactura, articulosTemporales);
@@ -190,7 +256,7 @@ else
         nuevaFactura = new() { Fecha = DateTime.Now };
         articulosTemporales.Clear();
         totalTemporal = 0;
-        mensajeOk = "Guardado.";
+        mensajeOk = "Venta registrada con éxito.";
         await Cargar();
     }
 
@@ -207,7 +273,6 @@ else
         await Cargar();
     }
 
- 
     private async Task CargarArticulos(int fid)
     {
         articulosPorFactura[fid] = await servicio.ObtenerArticulosPorFactura(fid);
