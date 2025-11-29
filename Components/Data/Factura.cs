@@ -8,7 +8,8 @@
         public String Nombre { get; set; }=String.Empty;
 
         public int Total { get; set; }
-        
+        public bool Archivada { get; set; } = false;
+
 
     }
 }
