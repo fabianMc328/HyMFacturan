@@ -1,0 +1,154 @@
+﻿@page "/archivadas"
+@rendermode InteractiveServer
+
+@using HyMFacturan.Components.Data
+@using HyMFacturan.Components.Servicios
+
+@inject ServicioControlador servicio
+@inject NavigationManager NavManager
+
+<div class="container mt-5">
+
+    @if (!haIniciadoSesion)
+    {
+        <div class="row justify-content-center">
+            <div class="col-md-5">
+                <div class="card border-0 shadow-lg rounded-4 mt-5">
+                    <div class="card-body p-5 text-center">
+                        <div class="mb-4">
+                            <div class="bg-dark text-white rounded-circle d-inline-flex justify-content-center align-items-center" style="width: 80px; height: 80px;">
+                                <i class="bi bi-shield-lock-fill fs-1"></i>
+                            </div>
+                        </div>
+                        <h3 class="fw-bold mb-1">Acceso Restringido</h3>
+                        <p class="text-muted mb-4">Ingresa credenciales de administrador</p>
+
+                        @if (!string.IsNullOrEmpty(mensajeError))
+                        {
+                            <div class="alert alert-danger py-2 small rounded-3 mb-3">
+                                <i class="bi bi-exclamation-circle me-1"></i> @mensajeError
+                            </div>
+                        }
+
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control rounded-3" id="floatingInput" placeholder="Usuario" @bind="usuarioInput">
+                            <label for="floatingInput">Usuario</label>
+                        </div>
+                        <div class="form-floating mb-4">
+                            <input type="password" class="form-control rounded-3" id="floatingPassword" placeholder="Contraseña" @bind="passwordInput">
+                            <label for="floatingPassword">Contraseña</label>
+                        </div>
+
+                        <button class="btn btn-dark w-100 py-3 rounded-pill fw-bold shadow-sm" @onclick="Login">
+                            Desbloquear Bóveda <i class="bi bi-arrow-right-short ms-1"></i>
+                        </button>
+
+                        <div class="mt-4">
+                            <button class="btn btn-link text-muted text-decoration-none small" @onclick="Regresar">
+                                ← Volver al inicio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="fw-bold mb-0"><i class="bi bi-archive-fill me-2 text-warning"></i>Facturas Archivadas</h3>
+                <small class="text-muted">Estas facturas están ocultas del sistema principal</small>
+            </div>
+            <div>
+                <button class="btn btn-outline-dark me-2" @onclick="CerrarSesion">Bloquear <i class="bi bi-lock-fill"></i></button>
+                <button class="btn btn-primary" @onclick="Regresar">Ir al Inicio <i class="bi bi-arrow-right"></i></button>
+            </div>
+        </div>
+
+        @if (facturasArchivadas.Any())
+        {
+            <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-secondary">
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Fecha</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th class="text-end pe-4">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var f in facturasArchivadas)
+                        {
+                            <tr>
+                                <td class="ps-4 fw-bold text-muted">#@f.Id</td>
+                                <td>@f.Fecha.ToShortDateString()</td>
+                                <td>@f.Nombre</td>
+                                <td class="fw-bold">$@f.Total</td>
+                                <td class="text-end pe-4">
+                                    <button class="btn btn-success btn-sm rounded-pill px-3" @onclick="() => Restaurar(f.Id)">
+                                        <i class="bi bi-arrow-counterclockwise me-1"></i> Restaurar
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="text-center py-5 border border-dashed rounded-4 text-muted mt-4">
+                <i class="bi bi-box-seam fs-1 d-block mb-3 opacity-50"></i>
+                <h5>La bóveda está vacía</h5>
+                <p>No tienes facturas archivadas actualmente.</p>
+            </div>
+        }
+    }
+</div>
+
+@code {
+    private bool haIniciadoSesion = false;
+    private string usuarioInput = "";
+    private string passwordInput = "";
+    private string mensajeError = "";
+    private List<Factura> facturasArchivadas = new();
+
+    private void Login()
+    {
+        // Credenciales: admin / 1234
+        if (usuarioInput.Trim() == "admin" && passwordInput.Trim() == "1234")
+        {
+            haIniciadoSesion = true;
+            mensajeError = "";
+            usuarioInput = "";
+            passwordInput = "";
+            CargarDatos();
+        }
+        else
+        {
+            mensajeError = "Usuario o contraseña incorrectos.";
+        }
+    }
+
+    private void CerrarSesion()
+    {
+        haIniciadoSesion = false;
+        facturasArchivadas.Clear();
+    }
+
+    private async Task CargarDatos()
+    {
+        facturasArchivadas = await servicio.ObtenerFacturasArchivadas();
+    }
+
+    private async Task Restaurar(int id)
+    {
+        await servicio.CambiarEstadoArchivado(id, false); // False = Visible
+        await CargarDatos();
+    }
+
+    private void Regresar() => NavManager.NavigateTo("/vista");
+}
