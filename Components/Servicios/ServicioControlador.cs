@@ -58,5 +58,14 @@ namespace HyMFacturan.Components.Servicios
         {
             return await _servicioFacturas.ObtenerDatos();
         }
+        public async Task CambiarEstadoArchivado(int id, bool archivar)
+        {
+            await _servicioFacturas.CambiarEstadoArchivado(id, archivar);
+        }
+
+        public async Task<List<Factura>> ObtenerFacturasArchivadas()
+        {
+            return await _servicioFacturas.ObtenerFacturasArchivadas();
+        }
     }
 }

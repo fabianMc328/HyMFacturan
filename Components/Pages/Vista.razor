@@ -13,13 +13,20 @@
             <h3 class="fw-bold text-dark mb-0"><i class="bi bi-receipt me-2"></i>Gestión de Facturación</h3>
             <p class="text-muted small">Administra tus ventas y clientes</p>
         </div>
-        <div class="d-flex gap-2">
-            <button class="btn btn-white border shadow-sm hover-card" @onclick="IrAConsultas">
-                <i class="bi bi-bar-chart-fill text-primary me-2"></i>Dashboard
+
+        <div>
+            <button class="btn btn-outline-dark me-2" @onclick='() => NavManager.NavigateTo("/archivadas")'>
+                <i class="bi bi-archive-fill"></i> Ver Archivadas
             </button>
-            <button class="btn btn-white border shadow-sm hover-card" @onclick="IrAReporte">
-                <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Reporte SAT
-            </button>
+
+            <div class="d-inline-flex gap-2">
+                <button class="btn btn-white border shadow-sm hover-card" @onclick="IrAConsultas">
+                    <i class="bi bi-bar-chart-fill text-primary me-2"></i>Dashboard
+                </button>
+                <button class="btn btn-white border shadow-sm hover-card" @onclick="IrAReporte">
+                    <i class="bi bi-file-earmark-pdf-fill text-danger me-2"></i>Reporte SAT
+                </button>
+            </div>
         </div>
     </div>
 
@@ -146,6 +153,11 @@
                                             <td class="fw-bold">@f.Nombre</td>
                                             <td><span class="badge bg-success bg-opacity-10 text-success px-3 py-2 rounded-pill">$@f.Total</span></td>
                                             <td class="text-end pe-4">
+
+                                                <button class="btn btn-sm btn-warning text-dark me-1" title="Archivar" @onclick="() => Archivar(f.Id)">
+                                                    <i class="bi bi-archive-fill"></i>
+                                                </button>
+
                                                 @if (!articulosPorFactura.ContainsKey(f.Id))
                                                 {
                                                     <button class="btn btn-sm btn-light border" @onclick="() => CargarArticulos(f.Id)">
@@ -212,8 +224,6 @@
 </div>
 
 @code {
-   
-
     private List<Factura>? facturasGuardadas;
     private string mensajeError = string.Empty;
     private string mensajeOk = string.Empty;
@@ -309,5 +319,13 @@
         int nuevoTotal = articulosPorFactura[f.Id].Sum(a => a.Precio);
         await servicio.ActualizarTotalFactura(f.Id, nuevoTotal);
         f.Total = nuevoTotal;
+    }
+
+   
+    private async Task Archivar(int id)
+    {
+        await servicio.CambiarEstadoArchivado(id, true);
+        mensajeOk = "Factura archivada correctamente.";
+        await Cargar();
     }
 }
